@@ -335,7 +335,7 @@ function showHistory(){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-history').classList.add('active');
   document.getElementById('historyList').innerHTML='<div class="empty-state">読み込み中...</div>';
-  fetch('https://script.google.com/macros/s/AKfycbwckRpcuVkyD-U4WYlR4pdzmEkwpujntt4kd8gxwSZacLqYR98jwhc67JC-j1JYvHzNaQ/exec?type=karte')
+  fetch(GAS_URL+'?type=karte')
     .then(r=>r.json())
     .then(data=>{ records=data; renderHistory(''); })
     .catch(()=>{ renderHistory(''); });
