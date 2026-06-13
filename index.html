@@ -200,6 +200,12 @@ html,body{width:100%;min-height:100vh;background:#F5F0E8}
       </div>
     </div>
     <div class="section">
+      <div class="section-label">お客様氏名</div>
+      <div class="narrow">
+        <input class="field" id="editName" type="text" placeholder="氏名を入力">
+      </div>
+    </div>
+    <div class="section">
       <div class="section-label">希望部位</div>
       <div class="edit-parts-grid" id="editPartsGrid"></div>
     </div>
@@ -455,6 +461,7 @@ function showEdit(){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-edit').classList.add('active');
   document.getElementById('editDate').value = fmtDate(r.date);
+  document.getElementById('editName').value = r.name||'';
   document.getElementById('editComment').value = r.comment||'';
   editState.redness = r.redness||'';
   editState.removal = r.removal||'';
@@ -500,20 +507,21 @@ function saveEdit(){
   const newParts = [...document.querySelectorAll('#editPartsGrid .part-tag.selected')].map(b=>b.textContent);
   const newGoal = (document.querySelector('#screen-edit .goal-btn.selected')||{}).textContent||'';
   const newDate = document.getElementById('editDate').value;
+  const newName = document.getElementById('editName').value.trim()||currentName;
   const newComment = document.getElementById('editComment').value;
   gasPost({
     type:'karte_edit',
     original_date: fmtDate(r.date),
     original_name: currentName,
     date: newDate,
-    name: currentName,
+    name: newName,
     parts: newParts.join('・'),
     goal: newGoal,
     redness: editState.redness,
     removal: editState.removal,
     comment: newComment
   }, ()=>{
-    const updated={date:newDate,name:currentName,parts:newParts,goal:newGoal,redness:editState.redness,removal:editState.removal,comment:newComment};
+    const updated={date:newDate,name:newName,parts:newParts,goal:newGoal,redness:editState.redness,removal:editState.removal,comment:newComment};
     currentKartes[currentIdx]=updated;
     showToast('更新しました ✓');
   });
