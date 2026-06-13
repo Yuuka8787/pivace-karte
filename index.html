@@ -404,6 +404,7 @@ function deleteKarteAt(idx){
     const r=currentKartes[idx];
     records=records.filter(rec=>!(fmtDate(rec.date)===fmtDate(r.date)&&rec.name===r.name));
     currentKartes.splice(idx,1);
+    saveRecords();
     if(currentKartes.length===0){showHistory();return;}
     showDetail(currentName);
     showToast('削除しました');
@@ -415,6 +416,7 @@ function deleteKarte(){
     const r=currentKartes[currentIdx];
     records=records.filter(rec=>!(fmtDate(rec.date)===fmtDate(r.date)&&rec.name===r.name));
     currentKartes.splice(currentIdx,1);
+    saveRecords();
     if(currentKartes.length===0){showHistory();return;}
     showDetail(currentName);
     showToast('削除しました');
