@@ -94,7 +94,6 @@ html,body{width:100%;min-height:100vh;background:#F5F0E8}
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500&display=swap" rel="stylesheet">
 
-<iframe name="gas_iframe" style="display:none"></iframe>
 <div id="app">
   <div class="toast" id="toast"></div>
 
@@ -246,7 +245,7 @@ const PARTS=[
 ];
 
 let state={date:'',name:'',parts:new Set(),goal:'',redness:'',removal:'',comment:''};
-let records=[];
+let records=JSON.parse(localStorage.getItem('pv_rec')||'[]');
 let customers=JSON.parse(localStorage.getItem('pv_cust')||'[]');
 
 (function(){
@@ -284,45 +283,20 @@ function pickName(n){state.name=n;document.getElementById('nameInput').value=n;d
 document.addEventListener('click',e=>{if(!e.target.closest('.name-wrap'))document.getElementById('autocomplete').style.display='none';});
 
 
-const GAS_URL='https://script.google.com/macros/s/AKfycbx9s18WfsgnQGOrUlIblzxn22HITjntFvn_9zWMMRM-bOMKawfB2EApQTj3pxhQQAH2/exec';
-
-function gasPost(params, onDone){
-  const f=document.createElement('form');
-  f.method='POST'; f.action=GAS_URL; f.target='gas_iframe';
-  f.style.display='none';
-  Object.entries(params).forEach(([k,v])=>{
-    const i=document.createElement('input');
-    i.type='hidden'; i.name=k; i.value=v||'';
-    f.appendChild(i);
-  });
-  document.body.appendChild(f);
-  f.submit();
-  document.body.removeChild(f);
-  setTimeout(()=>{ if(onDone) onDone(); }, 1200);
-}
-
 function saveRecord(){
   if(!state.name.trim()){showToast('お名前を入力してください');return;}
   if(!state.date){showToast('来店日を選択してください');return;}
   const name=state.name.trim();
-  gasPost({
-    type:'karte',
-    date:state.date,
-    name:name,
-    parts:[...state.parts].join('・'),
-    goal:state.goal,
-    redness:state.redness,
-    removal:state.removal,
-    comment:document.getElementById('commentInput').value
-  }, ()=>{
-    showToast('カルテを保存しました ✓');
-    if(!customers.includes(name)){customers.push(name);localStorage.setItem('pv_cust',JSON.stringify(customers));}
-    resetForm();
-  });
+  const rec={id:Date.now(),date:state.date,name:name,parts:[...state.parts],goal:state.goal,redness:state.redness,removal:state.removal,comment:document.getElementById('commentInput').value};
+  records.push(rec);
+  saveRecords();
+  if(!customers.includes(name)){customers.push(name);localStorage.setItem('pv_cust',JSON.stringify(customers));}
+  showToast('カルテを保存しました ✓');
+  resetForm();
 }
 
 function saveRecords(){
-  // GAS連携のため不要（互換のため残す）
+  localStorage.setItem('pv_rec',JSON.stringify(records));
 }
 function resetForm(){
   state.parts=new Set();state.goal='';state.redness='';state.removal='';
@@ -334,11 +308,7 @@ function showToast(m){const t=document.getElementById('toast');t.textContent=m;t
 function showHistory(){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-history').classList.add('active');
-  document.getElementById('historyList').innerHTML='<div class="empty-state">読み込み中...</div>';
-  fetch(GAS_URL+'?type=karte')
-    .then(r=>r.json())
-    .then(data=>{ records=data; renderHistory(''); })
-    .catch(()=>{ renderHistory(''); });
+  renderHistory('');
 }
 function showForm(){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-form').classList.add('active');}
 function renderHistory(q){
@@ -347,7 +317,7 @@ function renderHistory(q){
   if(!names.length){list.innerHTML='<div class="empty-state">記録がありません</div>';return;}
   list.innerHTML=names.map(name=>{
     const rs=records.filter(r=>r.name===name),last=rs[rs.length-1];
-    return `<div class="customer-card" onclick="showDetail('${name}')"><div class="customer-name">${name}</div><div class="customer-meta">来店 ${rs.length}回 ／ 最終: ${last.date}</div></div>`;
+    return `<div class="customer-card" onclick="showDetail('${name}')"><div class="customer-name">${name}</div><div class="customer-meta">来店 ${rs.length}回 ／ 最終: ${fmtDate(last.date)}</div></div>`;
   }).join('');
 }
 // 日付をYYYY-MM-DDに正規化
@@ -434,7 +404,6 @@ function deleteKarteAt(idx){
     const r=currentKartes[idx];
     records=records.filter(rec=>!(fmtDate(rec.date)===fmtDate(r.date)&&rec.name===r.name));
     currentKartes.splice(idx,1);
-    saveRecords();
     if(currentKartes.length===0){showHistory();return;}
     showDetail(currentName);
     showToast('削除しました');
@@ -446,7 +415,6 @@ function deleteKarte(){
     const r=currentKartes[currentIdx];
     records=records.filter(rec=>!(fmtDate(rec.date)===fmtDate(r.date)&&rec.name===r.name));
     currentKartes.splice(currentIdx,1);
-    saveRecords();
     if(currentKartes.length===0){showHistory();return;}
     showDetail(currentName);
     showToast('削除しました');
@@ -503,23 +471,12 @@ function saveEdit(){
   const newGoal = (document.querySelector('#screen-edit .goal-btn.selected')||{}).textContent||'';
   const newDate = document.getElementById('editDate').value;
   const newComment = document.getElementById('editComment').value;
-  gasPost({
-    type:'karte_edit',
-    original_date: fmtDate(r.date),
-    original_name: currentName,
-    date: newDate,
-    name: currentName,
-    parts: newParts.join('・'),
-    goal: newGoal,
-    redness: editState.redness,
-    removal: editState.removal,
-    comment: newComment
-  }, ()=>{
-    // ローカルも更新
-    const updated={date:newDate,name:currentName,parts:newParts,goal:newGoal,redness:editState.redness,removal:editState.removal,comment:newComment};
-    currentKartes[currentIdx]=updated;
-    showToast('更新しました ✓');
-  });
+  const updated={date:newDate,name:currentName,parts:newParts,goal:newGoal,redness:editState.redness,removal:editState.removal,comment:newComment};
+  const ri=records.findIndex(rec=>fmtDate(rec.date)===fmtDate(r.date)&&rec.name===r.name);
+  if(ri>=0) records[ri]=updated;
+  currentKartes[currentIdx]=updated;
+  saveRecords();
+  showToast('更新しました ✓');
 }
 
 </script>
