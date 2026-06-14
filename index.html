@@ -30,8 +30,8 @@ html,body{width:100%;min-height:100vh;background:#F5F0E8}
 .part-tag.selected{background:var(--teal);border-color:var(--teal);color:#fff}
 .part-tag.new-tag{border-color:var(--orange);color:var(--orange);background:var(--orange-light)}
 .part-tag.new-tag.selected{background:var(--orange);border-color:var(--orange);color:#fff}
-.goal-row{display:flex;gap:8px}
-.goal-btn{flex:1;padding:7px 4px;border:1px solid var(--border);border-radius:8px;font-size:14px;color:var(--muted);cursor:pointer;background:#fff;text-align:center}
+.goal-row{display:flex;gap:8px;flex-wrap:wrap}
+.goal-btn{flex:0 0 auto;padding:7px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;color:var(--muted);cursor:pointer;background:#fff;text-align:center;width:auto}
 .goal-btn.selected{background:var(--orange-light);border-color:var(--orange);color:var(--orange);font-weight:500}
 .check-row{display:flex;gap:10px}
 .check-opt{padding:6px 20px;border:1px solid var(--border);border-radius:8px;font-size:14px;color:var(--muted);cursor:pointer;background:#fff}
@@ -129,6 +129,14 @@ html,body{width:100%;min-height:100vh;background:#F5F0E8}
     </div>
 
     <div class="section">
+      <div class="section-label">仕上がり</div>
+      <div class="goal-row">
+        <button class="goal-btn" onclick="selectFinish(this)">オールオフ</button>
+        <button class="goal-btn" onclick="selectFinish(this)">V残し</button>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-label">ゴール</div>
       <div class="goal-row">
         <button class="goal-btn" onclick="selectGoal(this)">ツルツル</button>
@@ -210,11 +218,22 @@ html,body{width:100%;min-height:100vh;background:#F5F0E8}
       <div class="edit-parts-grid" id="editPartsGrid"></div>
     </div>
     <div class="section">
+      <div class="section-label">仕上がり</div>
+      <div class="goal-row">
+        <button class="goal-btn" onclick="selectEditFinish(this)">オールオフ</button>
+        <button class="goal-btn" onclick="selectEditFinish(this)">V残し</button>
+      </div>
+    </div>
+    <div class="section">
       <div class="section-label">ゴール</div>
       <div class="goal-row">
         <button class="goal-btn" onclick="selectEditGoal(this)">ツルツル</button>
         <button class="goal-btn" onclick="selectEditGoal(this)">減毛</button>
         <button class="goal-btn" onclick="selectEditGoal(this)">今回のみ</button>
+      </div>
+      <div class="goal-row" style="margin-top:6px">
+        <button class="goal-btn" onclick="selectEditGoal(this)">オールオフ</button>
+        <button class="goal-btn" onclick="selectEditGoal(this)">V残し</button>
       </div>
     </div>
     <div class="section">
@@ -251,7 +270,7 @@ const PARTS=[
   {label:'お腹（へそ下）',cat:'body',br:false},{label:'お腹（全体）',cat:'body',br:false},{label:'脇',cat:'body',br:false},{label:'うなじ',cat:'body',br:false},{label:'手の甲・指',cat:'arms',br:false},{label:'足の甲・指',cat:'legs',br:false},
 ];
 
-let state={date:'',name:'',parts:new Set(),goal:'',redness:'',removal:'',comment:''};
+let state={date:'',name:'',parts:new Set(),goal:'',finish:'',redness:'',removal:'',comment:''};
 let records=[];
 let customers=JSON.parse(localStorage.getItem('pv_cust')||'[]');
 
@@ -276,6 +295,12 @@ function renderParts(){
 }
 function togglePart(l,el){state.parts.has(l)?(state.parts.delete(l),el.classList.remove('selected')):(state.parts.add(l),el.classList.add('selected'));}
 function selectGoal(el){document.querySelectorAll('.goal-btn').forEach(b=>b.classList.remove('selected'));el.classList.add('selected');state.goal=el.textContent;}
+function selectFinish(el){
+  // 仕上がりボタンのみ対象
+  el.closest('.goal-row').querySelectorAll('.goal-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.toggle('selected');
+  state.finish=el.classList.contains('selected')?el.textContent:'';
+}
 function selectCheck(f,v,el){el.parentElement.querySelectorAll('.check-opt').forEach(b=>b.classList.remove('selected'));el.classList.add('selected');state[f]=v;}
 
 function onNameInput(v){
@@ -317,6 +342,7 @@ function saveRecord(){
     name:name,
     parts:[...state.parts].join('・'),
     goal:state.goal,
+    finish:state.finish||'',
     redness:state.redness,
     removal:state.removal,
     comment:document.getElementById('commentInput').value
@@ -329,7 +355,7 @@ function saveRecord(){
 
 function saveRecords(){}
 function resetForm(){
-  state.parts=new Set();state.goal='';state.redness='';state.removal='';
+  state.parts=new Set();state.goal='';state.finish='';state.redness='';state.removal='';
   document.getElementById('commentInput').value='';document.getElementById('nameInput').value='';state.name='';
   renderParts();document.querySelectorAll('.goal-btn,.check-opt').forEach(b=>b.classList.remove('selected'));
 }
@@ -414,7 +440,8 @@ function openKarte(idx){
         <div class="karte-card-label">施術部位</div>
         <div class="karte-parts-wrap">${parts.length ? parts.map(p=>`<span class="karte-part-chip">${p}</span>`).join('') : '<span style="color:var(--muted);font-size:13px">—</span>'}</div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+        <div><div class="karte-card-label">仕上がり</div><div class="karte-card-value">${r.finish||'—'}</div></div>
         <div><div class="karte-card-label">ゴール</div><div class="karte-card-value">${r.goal||'—'}</div></div>
         <div><div class="karte-card-label">赤み</div><div class="karte-card-value">${r.redness||'—'}</div></div>
         <div><div class="karte-card-label">抜け</div><div class="karte-card-value">${r.removal||'—'}</div></div>
@@ -495,6 +522,10 @@ function showEdit(){
 function selectEditGoal(el){
   document.querySelectorAll('#screen-edit .goal-btn').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
+}
+function selectEditFinish(el){
+  el.closest('.goal-row').querySelectorAll('.goal-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.toggle('selected');
 }
 function selectEditCheck(f,v,el){
   el.parentElement.querySelectorAll('.check-opt').forEach(b=>b.classList.remove('selected'));
